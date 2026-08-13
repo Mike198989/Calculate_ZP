@@ -399,15 +399,19 @@ def main(page: ft.Page):
         ft.Container(content=settings_view, padding=10)
     ])
 
-    # Центрированный заголовок с верхней отступ-паузой (top=20)
+    # Безопасное выравнивание заголовка по центру с версткой через Row
     header = ft.Container(
-        content=ft.Text(
-            "Калькулятор ЗП", 
-            size=24, 
-            weight=ft.FontWeight.BOLD,
-            text_align=ft.TextAlign.CENTER
+        content=ft.Row(
+            [
+                ft.Text(
+                    "Калькулятор ЗП", 
+                    size=24, 
+                    weight=ft.FontWeight.BOLD,
+                    text_align=ft.TextAlign.CENTER
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER
         ),
-        alignment=ft.alignment.center,
         padding=ft.padding.only(top=20, bottom=10)
     )
 
@@ -428,3 +432,4 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
+
