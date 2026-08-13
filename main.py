@@ -162,7 +162,7 @@ def main(page: ft.Page):
         "difficulty_surcharge_percent": 0.10,
         "ndfl_rate": 0.13,
         "bonus_percent_of_base_hours": 0.95,
-        "theme_mode": "system"  # "system", "dark", "light"
+        "theme_mode": "system"
     }
     
     coefficients = default_coefficients.copy()
@@ -174,7 +174,6 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    # Применение сохраненной темы
     saved_theme = coefficients.get("theme_mode", "system")
     if saved_theme == "dark":
         page.theme_mode = ft.ThemeMode.DARK
@@ -213,7 +212,6 @@ def main(page: ft.Page):
             height=55,
         )
 
-    # Выбор темы оформлением
     theme_dropdown = ft.Dropdown(
         label="Тема оформления",
         value=saved_theme,
@@ -292,7 +290,6 @@ def main(page: ft.Page):
                     raise ValueError(f"Коэффициент '{k}' не может быть < 0")
                 coefficients[k] = val
             
-            # Сохраняем тему
             selected_theme = theme_dropdown.value
             coefficients["theme_mode"] = selected_theme
             
@@ -350,13 +347,11 @@ def main(page: ft.Page):
         save_state()
         page.update()
 
-    # Вкладка 1: Смены
     shifts_view = ft.Column([
         inputs["days_worked_normal"],
         inputs["evening_shifts"],
     ], spacing=15, visible=True)
 
-    # Вкладка 2: Часы / Переработки
     hours_view = ft.Column([
         inputs["days_pre_holiday_reduced"],
         inputs["days_pre_holiday_reduced_evening"],
@@ -367,7 +362,6 @@ def main(page: ft.Page):
         inputs["hours_night"],
     ], spacing=15, visible=False)
 
-    # Вкладка 3: Настройки
     settings_view = ft.Column([
         theme_dropdown,
         ft.Divider(),
@@ -405,8 +399,20 @@ def main(page: ft.Page):
         ft.Container(content=settings_view, padding=10)
     ])
 
+    # Центрированный заголовок с верхней отступ-паузой (top=20)
+    header = ft.Container(
+        content=ft.Text(
+            "Калькулятор ЗП", 
+            size=24, 
+            weight=ft.FontWeight.BOLD,
+            text_align=ft.TextAlign.CENTER
+        ),
+        alignment=ft.alignment.center,
+        padding=ft.padding.only(top=20, bottom=10)
+    )
+
     page.add(
-        ft.Text("Калькулятор ЗП", size=24, weight=ft.FontWeight.BOLD),
+        header,
         custom_tabs_ui,
         ft.Row([
             ft.ElevatedButton("Рассчитать", on_click=calculate_click, expand=True, height=50),
@@ -422,4 +428,3 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
-
