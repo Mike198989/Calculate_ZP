@@ -145,7 +145,8 @@ def calculate_salary(
 def main(page: ft.Page):
     page.title = "Калькулятор ЗП"
     page.scroll = ft.ScrollMode.AUTO
-    page.padding = 15
+    page.padding = 16
+    page.theme = ft.Theme(color_scheme_seed=ft.Colors.BLUE, use_material3=True)
 
     settings_file = "app_settings.json"
     last_input_file = "last_input.json"
@@ -184,15 +185,15 @@ def main(page: ft.Page):
 
     inputs = {}
     fields_config = [
-        ("days_worked_normal", "Всего отработано смен", "0"),
-        ("evening_shifts", "Количество вечерних смен", "0"),
-        ("days_pre_holiday_reduced", "Сокращенные дни (общее)", "0"),
-        ("days_pre_holiday_reduced_evening", "Сокращенные вечерние смены", "0"),
-        ("hours_overtime_first_two", "Переработка (первые 2ч)", "0"),
-        ("hours_overtime_after_two", "Переработка (последующие)", "0"),
-        ("hours_weekend_holiday", "Часы в выходные/праздники", "0"),
-        ("days_non_working_holiday", "Нерабочие праздничные дни", "0"),
-        ("hours_night", "Ночные часы", "0"),
+        ("days_worked_normal", "Всего отработано смен", "0", ft.Icons.WORK_OUTLINED, "смен"),
+        ("evening_shifts", "Количество вечерних смен", "0", ft.Icons.BEDTIME_OUTLINED, "смен"),
+        ("days_pre_holiday_reduced", "Сокращенные дни (общее)", "0", ft.Icons.TIMER_OFF_OUTLINED, "дн."),
+        ("days_pre_holiday_reduced_evening", "Сокращенные вечерние смены", "0", ft.Icons.NIGHT_SHELTER_OUTLINED, "дн."),
+        ("hours_overtime_first_two", "Переработка (первые 2ч)", "0", ft.Icons.MORE_TIME_OUTLINED, "ч"),
+        ("hours_overtime_after_two", "Переработка (последующие)", "0", ft.Icons.ADD_ALARM_OUTLINED, "ч"),
+        ("hours_weekend_holiday", "Часы в выходные/праздники", "0", ft.Icons.EVENT_AVAILABLE_OUTLINED, "ч"),
+        ("days_non_working_holiday", "Нерабочие праздничные дни", "0", ft.Icons.CELEBRATION_OUTLINED, "дн."),
+        ("hours_night", "Ночные часы", "0", ft.Icons.DARK_MODE_OUTLINED, "ч"),
     ]
 
     saved_inputs = {}
@@ -203,18 +204,23 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    for key, label, default_val in fields_config:
+    for key, label, default_val, icon, suffix in fields_config:
         val = saved_inputs.get(key, default_val)
         inputs[key] = ft.TextField(
             label=label,
             value=str(val if val is not None else default_val),
             keyboard_type=ft.KeyboardType.NUMBER,
-            height=55,
+            prefix_icon=icon,
+            suffix_text=suffix,
+            border_radius=12,
+            height=58,
         )
 
     theme_dropdown = ft.Dropdown(
         label="Тема оформления",
         value=saved_theme,
+        prefix_icon=ft.Icons.PALETTE_OUTLINED,
+        border_radius=12,
         options=[
             ft.dropdown.Option("system", "Системная"),
             ft.dropdown.Option("dark", "Темная"),
@@ -224,30 +230,61 @@ def main(page: ft.Page):
 
     settings_inputs = {}
     coefficients_config = [
-        ("hourly_rate", "Часовая ставка (руб.)"),
-        ("overtime_multiplier_first_two_hours", "Множитель сверхурочных (1-2 ч)"),
-        ("overtime_multiplier_after_two_hours", "Множитель сверхурочных (после 2 ч)"),
-        ("weekend_holiday_multiplier", "Множитель вых./праздников (часы)"),
-        ("non_working_holiday_multiplier", "Множитель праздничных дней"),
-        ("night_surcharge_percent", "Доплата за ночь (доля, напр. 0.2)"),
-        ("evening_surcharge_percent", "Доплата за вечер (доля, напр. 0.2)"),
-        ("hazard_surcharge_percent", "Вредность (доля, напр. 0.12)"),
-        ("difficulty_surcharge_percent", "Сложность (доля, напр. 0.1)"),
-        ("ndfl_rate", "НДФЛ (доля, напр. 0.13)"),
-        ("bonus_percent_of_base_hours", "Премия от базы (доля, напр. 0.95)"),
+        ("hourly_rate", "Часовая ставка (руб.)", ft.Icons.MONETIZATION_ON_OUTLINED),
+        ("overtime_multiplier_first_two_hours", "Множитель сверхурочных (1-2 ч)", ft.Icons.NUMBERS_OUTLINED),
+        ("overtime_multiplier_after_two_hours", "Множитель сверхурочных (после 2 ч)", ft.Icons.NUMBERS_OUTLINED),
+        ("weekend_holiday_multiplier", "Множитель вых./праздников (часы)", ft.Icons.NUMBERS_OUTLINED),
+        ("non_working_holiday_multiplier", "Множитель праздничных дней", ft.Icons.NUMBERS_OUTLINED),
+        ("night_surcharge_percent", "Доплата за ночь (доля, напр. 0.2)", ft.Icons.PERCENT_OUTLINED),
+        ("evening_surcharge_percent", "Доплата за вечер (доля, напр. 0.2)", ft.Icons.PERCENT_OUTLINED),
+        ("hazard_surcharge_percent", "Вредность (доля, напр. 0.12)", ft.Icons.PERCENT_OUTLINED),
+        ("difficulty_surcharge_percent", "Сложность (доля, напр. 0.1)", ft.Icons.PERCENT_OUTLINED),
+        ("ndfl_rate", "НДФЛ (доля, напр. 0.13)", ft.Icons.PERCENT_OUTLINED),
+        ("bonus_percent_of_base_hours", "Премия от базы (доля, напр. 0.95)", ft.Icons.PERCENT_OUTLINED),
     ]
 
-    for k, label in coefficients_config:
+    for k, label, icon in coefficients_config:
         val = coefficients.get(k, 0)
         settings_inputs[k] = ft.TextField(
             label=label,
             value=str(val),
             keyboard_type=ft.KeyboardType.NUMBER,
-            height=55,
+            prefix_icon=icon,
+            border_radius=12,
+            height=58,
         )
 
-    net_output = ft.Text("0.00 руб.", size=28, weight=ft.FontWeight.BOLD)
-    details_column = ft.Column()
+    # Элементы карточки с результатом
+    net_output = ft.Text("0.00 руб.", size=30, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+    gross_output = ft.Text("Гросс: 0.00 руб.", size=13, color=ft.Colors.WHITE_70)
+    ndfl_output = ft.Text("НДФЛ: 0.00 руб.", size=13, color=ft.Colors.WHITE_70)
+
+    hero_card = ft.Card(
+        elevation=4,
+        content=ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("К ВЫПЛАТЕ (НА РУКИ)", size=12, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE_70),
+                    net_output,
+                    ft.Divider(color=ft.Colors.WHITE_24, height=12),
+                    ft.Row(
+                        [gross_output, ndfl_output],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                ],
+                spacing=4,
+            ),
+            padding=18,
+            border_radius=16,
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=["#1E88E5", "#1565C0", "#0D47A1"],
+            ),
+        ),
+    )
+
+    details_column = ft.Column(spacing=6)
 
     def show_snack(text):
         sb = ft.SnackBar(content=ft.Text(text))
@@ -321,16 +358,30 @@ def main(page: ft.Page):
             result = calculate_salary(**params)
 
             net_output.value = f"{result['net_salary']:,.2f} руб."
+            gross_output.value = f"Гросс: {result['gross_salary']:,.2f} руб."
+            ndfl_output.value = f"НДФЛ: {result['ndfl_amount']:,.2f} руб."
+
             details_column.controls.clear()
 
             for name, val in result["breakdown"].items():
+                is_summary = name in ["Сумма до вычета (гросс)", "Итого к выплате (нетто)"]
+                text_color = ft.Colors.RED_400 if "НДФЛ" in name else (ft.Colors.GREEN_600 if is_summary else None)
+
                 details_column.controls.append(
-                    ft.Row(
-                        [
-                            ft.Text(name, size=14, expand=True),
-                            ft.Text(f"{val:,.2f}", size=14, weight=ft.FontWeight.BOLD)
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                    ft.Container(
+                        content=ft.Row(
+                            [
+                                ft.Text(name, size=13, expand=True, weight=ft.FontWeight.BOLD if is_summary else ft.FontWeight.NORMAL),
+                                ft.Text(
+                                    f"{val:,.2f} руб.", 
+                                    size=13, 
+                                    weight=ft.FontWeight.BOLD if is_summary else ft.FontWeight.W_500,
+                                    color=text_color
+                                )
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                        ),
+                        padding=ft.Padding.symmetric(vertical=2, horizontal=4)
                     )
                 )
             save_state()
@@ -343,6 +394,8 @@ def main(page: ft.Page):
             field.value = "0"
             field.border_color = None
         net_output.value = "0.00 руб."
+        gross_output.value = "Гросс: 0.00 руб."
+        ndfl_output.value = "НДФЛ: 0.00 руб."
         details_column.controls.clear()
         save_state()
         page.update()
@@ -350,7 +403,7 @@ def main(page: ft.Page):
     shifts_view = ft.Column([
         inputs["days_worked_normal"],
         inputs["evening_shifts"],
-    ], spacing=15, visible=True)
+    ], spacing=12, visible=True)
 
     hours_view = ft.Column([
         inputs["days_pre_holiday_reduced"],
@@ -360,73 +413,107 @@ def main(page: ft.Page):
         inputs["hours_weekend_holiday"],
         inputs["days_non_working_holiday"],
         inputs["hours_night"],
-    ], spacing=15, visible=False)
+    ], spacing=12, visible=False)
 
     settings_view = ft.Column([
         theme_dropdown,
         ft.Divider(),
         *[tf for tf in settings_inputs.values()],
-        ft.ElevatedButton("Сохранить настройки", on_click=save_settings_click, height=45)
-    ], spacing=15, visible=False)
+        ft.ElevatedButton(
+            "Сохранить настройки", 
+            icon=ft.Icons.SAVE_OUTLINED, 
+            on_click=save_settings_click, 
+            height=48,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
+        )
+    ], spacing=12, visible=False)
 
-    def show_shifts(e):
-        shifts_view.visible = True
-        hours_view.visible = False
-        settings_view.visible = False
+    def on_tab_change(e):
+        idx = int(e.control.selected_index)
+        shifts_view.visible = (idx == 0)
+        hours_view.visible = (idx == 1)
+        settings_view.visible = (idx == 2)
         page.update()
 
-    def show_hours(e):
-        shifts_view.visible = False
-        hours_view.visible = True
-        settings_view.visible = False
-        page.update()
+    tabs = ft.Tabs(
+        selected_index=0,
+        animation_duration=250,
+        tabs=[
+            ft.Tab(text="Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED),
+            ft.Tab(text="Часы / Перераб.", icon=ft.Icons.ACCESS_TIME_OUTLINED),
+            ft.Tab(text="Настройки", icon=ft.Icons.SETTINGS_OUTLINED),
+        ],
+        on_change=on_tab_change,
+    )
 
-    def show_settings_tab(e):
-        shifts_view.visible = False
-        hours_view.visible = False
-        settings_view.visible = True
-        page.update()
+    forms_card = ft.Card(
+        elevation=2,
+        content=ft.Container(
+            content=ft.Column([
+                shifts_view,
+                hours_view,
+                settings_view,
+            ]),
+            padding=16,
+            border_radius=14,
+        )
+    )
 
-    tab_btn_shifts = ft.TextButton("Смены", on_click=show_shifts, expand=True)
-    tab_btn_hours = ft.TextButton("Часы / Перераб.", on_click=show_hours, expand=True)
-    tab_btn_settings = ft.TextButton("Настройки", on_click=show_settings_tab, expand=True)
-
-    custom_tabs_ui = ft.Column([
-        ft.Row([tab_btn_shifts, tab_btn_hours, tab_btn_settings], alignment=ft.MainAxisAlignment.CENTER, spacing=0),
-        ft.Divider(height=1),
-        ft.Container(content=shifts_view, padding=10),
-        ft.Container(content=hours_view, padding=10),
-        ft.Container(content=settings_view, padding=10)
-    ])
+    details_card = ft.Card(
+        elevation=1,
+        content=ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=20, color=ft.Colors.BLUE),
+                    ft.Text("Детализация расчёта", size=15, weight=ft.FontWeight.BOLD),
+                ], spacing=8),
+                ft.Divider(height=10),
+                details_column,
+            ]),
+            padding=16,
+            border_radius=14,
+        )
+    )
 
     header = ft.Container(
         content=ft.Row(
             [
-                ft.Text(
-                    "Калькулятор ЗП", 
-                    size=24, 
-                    weight=ft.FontWeight.BOLD,
-                    text_align=ft.TextAlign.CENTER
-                )
+                ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET_ROUNDED, size=28, color=ft.Colors.BLUE),
+                ft.Text("Калькулятор ЗП", size=22, weight=ft.FontWeight.BOLD)
             ],
-            alignment=ft.MainAxisAlignment.CENTER
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=8
         ),
-        padding=ft.Padding.only(top=20, bottom=10)
+        padding=ft.Padding.only(top=10, bottom=10)
     )
 
     page.add(
         header,
-        custom_tabs_ui,
+        hero_card,
+        tabs,
+        forms_card,
         ft.Row([
-            ft.ElevatedButton("Рассчитать", on_click=calculate_click, expand=True, height=50),
-            ft.OutlinedButton("Очистить", on_click=clear_click, height=50),
+            ft.ElevatedButton(
+                "Рассчитать", 
+                icon=ft.Icons.CALCULATE_OUTLINED, 
+                on_click=calculate_click, 
+                expand=True, 
+                height=50,
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=12),
+                    bgcolor=ft.Colors.BLUE_600,
+                    color=ft.Colors.WHITE
+                )
+            ),
+            ft.OutlinedButton(
+                "Очистить", 
+                icon=ft.Icons.BACKSPACE_OUTLINED, 
+                on_click=clear_click, 
+                height=50,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
+            ),
         ], spacing=10),
-        ft.Divider(),
-        ft.Text("Результат:", size=16, weight=ft.FontWeight.BOLD),
-        net_output,
-        ft.Divider(),
-        ft.Text("Детализация:", size=16, weight=ft.FontWeight.BOLD),
-        details_column
+        details_card
     )
 
 if __name__ == "__main__":
