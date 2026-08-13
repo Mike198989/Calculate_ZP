@@ -185,15 +185,15 @@ def main(page: ft.Page):
 
     inputs = {}
     fields_config = [
-        ("days_worked_normal", "Всего отработано смен", "0", ft.Icons.WORK_OUTLINED, "смен"),
-        ("evening_shifts", "Количество вечерних смен", "0", ft.Icons.BEDTIME_OUTLINED, "смен"),
-        ("days_pre_holiday_reduced", "Сокращенные дни (общее)", "0", ft.Icons.TIMER_OFF_OUTLINED, "дн."),
-        ("days_pre_holiday_reduced_evening", "Сокращенные вечерние смены", "0", ft.Icons.NIGHT_SHELTER_OUTLINED, "дн."),
-        ("hours_overtime_first_two", "Переработка (первые 2ч)", "0", ft.Icons.MORE_TIME_OUTLINED, "ч"),
-        ("hours_overtime_after_two", "Переработка (последующие)", "0", ft.Icons.ADD_ALARM_OUTLINED, "ч"),
-        ("hours_weekend_holiday", "Часы в выходные/праздники", "0", ft.Icons.EVENT_AVAILABLE_OUTLINED, "ч"),
-        ("days_non_working_holiday", "Нерабочие праздничные дни", "0", ft.Icons.CELEBRATION_OUTLINED, "дн."),
-        ("hours_night", "Ночные часы", "0", ft.Icons.DARK_MODE_OUTLINED, "ч"),
+        ("days_worked_normal", "Отработано смен (смен)", "0", ft.Icons.WORK_OUTLINED),
+        ("evening_shifts", "Вечерних смен (смен)", "0", ft.Icons.BEDTIME_OUTLINED),
+        ("days_pre_holiday_reduced", "Сокращенные дни (общее, дн.)", "0", ft.Icons.TIMER_OFF_OUTLINED),
+        ("days_pre_holiday_reduced_evening", "Сокращенные вечерние смены (дн.)", "0", ft.Icons.NIGHT_SHELTER_OUTLINED),
+        ("hours_overtime_first_two", "Переработка первые 2ч (ч)", "0", ft.Icons.MORE_TIME_OUTLINED),
+        ("hours_overtime_after_two", "Переработка последующие (ч)", "0", ft.Icons.ADD_ALARM_OUTLINED),
+        ("hours_weekend_holiday", "Часы в вых./праздники (ч)", "0", ft.Icons.EVENT_AVAILABLE_OUTLINED),
+        ("days_non_working_holiday", "Нерабочие праздничные дни (дн.)", "0", ft.Icons.CELEBRATION_OUTLINED),
+        ("hours_night", "Ночные часы (ч)", "0", ft.Icons.DARK_MODE_OUTLINED),
     ]
 
     saved_inputs = {}
@@ -204,14 +204,13 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    for key, label, default_val, icon, suffix in fields_config:
+    for key, label, default_val, icon in fields_config:
         val = saved_inputs.get(key, default_val)
         inputs[key] = ft.TextField(
             label=label,
             value=str(val if val is not None else default_val),
             keyboard_type=ft.KeyboardType.NUMBER,
             prefix_icon=icon,
-            suffix_text=suffix,
             border_radius=12,
             height=58,
         )
@@ -518,3 +517,4 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
+
