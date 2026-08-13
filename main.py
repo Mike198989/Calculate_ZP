@@ -204,10 +204,10 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    for key, label, default_val, icon in fields_config:
+    for key, label_text, default_val, icon in fields_config:
         val = saved_inputs.get(key, default_val)
         inputs[key] = ft.TextField(
-            label=label,
+            label=label_text,
             value=str(val if val is not None else default_val),
             keyboard_type=ft.KeyboardType.NUMBER,
             prefix_icon=icon,
@@ -241,10 +241,10 @@ def main(page: ft.Page):
         ("bonus_percent_of_base_hours", "Премия от базы (доля, напр. 0.95)", ft.Icons.PERCENT_OUTLINED),
     ]
 
-    for k, label, icon in coefficients_config:
+    for k, label_text, icon in coefficients_config:
         val = coefficients.get(k, 0)
         settings_inputs[k] = ft.TextField(
-            label=label,
+            label=label_text,
             value=str(val),
             keyboard_type=ft.KeyboardType.NUMBER,
             prefix_icon=icon,
@@ -436,9 +436,9 @@ def main(page: ft.Page):
         selected_index=0,
         animation_duration=250,
         tabs=[
-            ft.Tab(text="Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED),
-            ft.Tab(text="Часы / Перераб.", icon=ft.Icons.ACCESS_TIME_OUTLINED),
-            ft.Tab(text="Настройки", icon=ft.Icons.SETTINGS_OUTLINED),
+            ft.Tab(label="Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED),
+            ft.Tab(label="Часы / Перераб.", icon=ft.Icons.ACCESS_TIME_OUTLINED),
+            ft.Tab(label="Настройки", icon=ft.Icons.SETTINGS_OUTLINED),
         ],
         on_change=on_tab_change,
     )
