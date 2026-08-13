@@ -48,4 +48,3 @@ jobs:
         with:
           name: flet-app-release
           path: build/apk/*.apk
-
