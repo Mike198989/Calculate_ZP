@@ -218,7 +218,6 @@ def main(page: ft.Page):
     theme_dropdown = ft.Dropdown(
         label="Тема оформления",
         value=saved_theme,
-        prefix_icon=ft.Icons.PALETTE_OUTLINED,
         border_radius=12,
         options=[
             ft.dropdown.Option("system", "Системная"),
@@ -253,7 +252,6 @@ def main(page: ft.Page):
             height=58,
         )
 
-    # Элементы карточки с результатом
     net_output = ft.Text("0.00 руб.", size=30, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
     gross_output = ft.Text("Гросс: 0.00 руб.", size=13, color=ft.Colors.WHITE_70)
     ndfl_output = ft.Text("НДФЛ: 0.00 руб.", size=13, color=ft.Colors.WHITE_70)
@@ -517,4 +515,3 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
-
