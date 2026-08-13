@@ -274,8 +274,8 @@ def main(page: ft.Page):
             padding=18,
             border_radius=16,
             gradient=ft.LinearGradient(
-                begin=ft.alignment.top_left,
-                end=ft.alignment.bottom_right,
+                begin=ft.Alignment(-1, -1),
+                end=ft.Alignment(1, 1),
                 colors=["#1E88E5", "#1565C0", "#0D47A1"],
             ),
         ),
@@ -378,7 +378,7 @@ def main(page: ft.Page):
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                         ),
-                        padding=ft.Padding.symmetric(vertical=2, horizontal=4)
+                        padding=ft.padding.symmetric(vertical=2, horizontal=4)
                     )
                 )
             save_state()
@@ -481,7 +481,7 @@ def main(page: ft.Page):
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=8
         ),
-        padding=ft.Padding.only(top=10, bottom=10)
+        padding=ft.padding.only(top=10, bottom=10)
     )
 
     page.add(
