@@ -250,7 +250,7 @@ def main(page: ft.Page):
     details_column = ft.Column()
 
     def show_snack(text):
-        sb = ft.SnackBar(ft.Text(text))
+        sb = ft.SnackBar(content=ft.Text(text))
         try:
             page.open(sb)
         except Exception:
@@ -399,7 +399,6 @@ def main(page: ft.Page):
         ft.Container(content=settings_view, padding=10)
     ])
 
-    # Безопасное выравнивание заголовка по центру с версткой через Row
     header = ft.Container(
         content=ft.Row(
             [
@@ -412,7 +411,7 @@ def main(page: ft.Page):
             ],
             alignment=ft.MainAxisAlignment.CENTER
         ),
-        padding=ft.padding.only(top=20, bottom=10)
+        padding=ft.Padding.only(top=20, bottom=10)
     )
 
     page.add(
@@ -432,4 +431,3 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
-
