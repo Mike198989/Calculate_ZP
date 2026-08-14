@@ -434,8 +434,7 @@ def main(page: ft.Page):
 
     tabs = ft.Tabs(
         selected_index=0,
-        animation_duration=250,
-        tabs=[
+        controls=[
             ft.Tab(label="Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED),
             ft.Tab(label="Часы / Перераб.", icon=ft.Icons.ACCESS_TIME_OUTLINED),
             ft.Tab(label="Настройки", icon=ft.Icons.SETTINGS_OUTLINED),
