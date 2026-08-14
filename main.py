@@ -254,8 +254,8 @@ def main(page: ft.Page):
             keyboard_type=ft.KeyboardType.NUMBER,
             expand=True,
             dense=True,
-            # Исправлено: заменено padding.symmetric на padding.only
-            content_padding=ft.padding.only(left=8, top=4, right=8, bottom=4),
+            # Исправлено: использование прямого класса ft.Padding(left, top, right, bottom)
+            content_padding=ft.Padding(8, 4, 8, 4),
             on_change=auto_recalculate,
         )
         inputs[key] = tf
@@ -498,7 +498,8 @@ def main(page: ft.Page):
         on_change=on_tab_change,
     )
 
-    main_content_container = ft.Container(content=shifts_tab_content, padding=ft.padding.only(top=10))
+    # Исправлено: использование ft.Padding(left, top, right, bottom)
+    main_content_container = ft.Container(content=shifts_tab_content, padding=ft.Padding(0, 10, 0, 0))
 
     # --- Вывод итога ---
     results_card = ft.Card(
