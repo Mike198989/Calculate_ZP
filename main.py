@@ -426,15 +426,19 @@ def main(page: ft.Page):
     ], spacing=12, visible=False)
 
     # --------------------------------------------------------------------------
-    # НАДЕЖНОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
+    # НАДЕЖНОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Стили оптимизированы под 1 строку)
     # --------------------------------------------------------------------------
+    btn_text_style = ft.TextStyle(size=11, weight=ft.FontWeight.W_500)
+
     active_btn_style = ft.ButtonStyle(
         bgcolor=ft.Colors.BLUE_600,
         color=ft.Colors.WHITE,
-        shape=ft.RoundedRectangleBorder(radius=10)
+        shape=ft.RoundedRectangleBorder(radius=10),
+        text_style=btn_text_style
     )
     inactive_btn_style = ft.ButtonStyle(
-        shape=ft.RoundedRectangleBorder(radius=10)
+        shape=ft.RoundedRectangleBorder(radius=10),
+        text_style=btn_text_style
     )
 
     btn_shifts = ft.ElevatedButton("Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED, style=active_btn_style, expand=True)
@@ -456,7 +460,7 @@ def main(page: ft.Page):
     btn_hours.on_click = lambda e: set_tab(1)
     btn_settings.on_click = lambda e: set_tab(2)
 
-    tabs_row = ft.Row([btn_shifts, btn_hours, btn_settings], spacing=6)
+    tabs_row = ft.Row([btn_shifts, btn_hours, btn_settings], spacing=4)
 
     forms_card = ft.Card(
         elevation=2,
@@ -487,6 +491,7 @@ def main(page: ft.Page):
         )
     )
 
+    # Заголовок приложения
     header = ft.Container(
         content=ft.Row(
             [
@@ -500,6 +505,7 @@ def main(page: ft.Page):
     )
 
     page.add(
+        ft.Container(height=20),  # Гарантированный отступ сверху под шторку/вырез смартфона
         header,
         hero_card,
         tabs_row,
@@ -530,4 +536,3 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
-
