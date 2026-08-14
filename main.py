@@ -254,7 +254,8 @@ def main(page: ft.Page):
             keyboard_type=ft.KeyboardType.NUMBER,
             expand=True,
             dense=True,
-            content_padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            # Исправлено: заменено padding.symmetric на padding.only
+            content_padding=ft.padding.only(left=8, top=4, right=8, bottom=4),
             on_change=auto_recalculate,
         )
         inputs[key] = tf
@@ -462,7 +463,7 @@ def main(page: ft.Page):
         spacing=10,
     )
 
-    # --- Переключатель режимов (ВАЖНО: используется list ["shifts"], а не set) ---
+    # --- Переключатель режимов ---
     def on_tab_change(e):
         nonlocal current_mode
         sel = e.control.selected
@@ -472,7 +473,6 @@ def main(page: ft.Page):
             tab_key = "shifts"
 
         current_mode = tab_key
-        # Принудительно передаём список, чтобы Flet не пытался сериализовать set
         tab_segmented.selected = [tab_key]
 
         if tab_key == "shifts":
@@ -487,7 +487,6 @@ def main(page: ft.Page):
 
         auto_recalculate()
 
-    # ЗДЕСЬ ИСПРАВЛЕНИЕ: selected задаётся списком ["shifts"], а не множеством {"shifts"}
     tab_segmented = ft.SegmentedButton(
         selected=["shifts"],
         segments=[
@@ -501,7 +500,7 @@ def main(page: ft.Page):
 
     main_content_container = ft.Container(content=shifts_tab_content, padding=ft.padding.only(top=10))
 
-    # --- Вывод итога (Главный экран результатов) ---
+    # --- Вывод итога ---
     results_card = ft.Card(
         color=ft.Colors.SURFACE_VARIANT,
         content=ft.Container(
@@ -548,7 +547,6 @@ def main(page: ft.Page):
         )
     )
 
-    # Первоначальный расчёт после загрузки компонентов
     auto_recalculate()
 
 
