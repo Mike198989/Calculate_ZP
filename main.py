@@ -31,7 +31,7 @@ def main(page: ft.Page):
     page.title = "Калькулятор Зарплаты"
     page.theme_mode = "dark"
     page.scroll = "auto"
-    page.padding = 16
+    page.padding = 12
 
     # --- Состояние программы ---
     coefficients = DEFAULT_COEFFICIENTS.copy()
@@ -201,8 +201,8 @@ def main(page: ft.Page):
             }
 
     # --- Элементы отображения результатов ---
-    net_output = ft.Text("0,00 ₽", size=28, weight="bold", color="green400")
-    payout_output = ft.Text("Остаток к выплате: 0,00 ₽", size=14, color="grey400")
+    net_output = ft.Text("0,00 ₽", size=26, weight="bold", color="green400")
+    payout_output = ft.Text("Остаток к выплате: 0,00 ₽", size=13, color="grey400")
     details_column = ft.Column(spacing=6)
 
     def auto_recalculate(e=None):
@@ -229,7 +229,10 @@ def main(page: ft.Page):
             details_column.controls.append(
                 ft.Row(
                     controls=[
-                        ft.Text(label, size=13, weight="bold" if is_bold else "normal"),
+                        ft.Container(
+                            content=ft.Text(label, size=13, weight="bold" if is_bold else "normal"),
+                            expand=True,
+                        ),
                         ft.Text(
                             format_rub(val),
                             size=13,
@@ -237,7 +240,6 @@ def main(page: ft.Page):
                             color=color,
                         ),
                     ],
-                    alignment="spaceBetween",
                 )
             )
 
@@ -250,9 +252,8 @@ def main(page: ft.Page):
         tf = ft.TextField(
             value=val_str,
             keyboard_type="number",
-            expand=True,
             dense=True,
-            content_padding=ft.Padding(8, 4, 8, 4),
+            content_padding=ft.Padding(6, 4, 6, 4),
             on_change=auto_recalculate,
         )
         inputs[key] = tf
@@ -267,24 +268,27 @@ def main(page: ft.Page):
             auto_recalculate()
 
         btn_minus = ft.IconButton(
-            icon="remove_circle_outline",
+            icon="remove",
             icon_color="red400",
             on_click=lambda _: change_val(-step),
         )
         btn_plus = ft.IconButton(
-            icon="add_circle_outline",
+            icon="add",
             icon_color="green400",
             on_click=lambda _: change_val(step),
         )
 
         row = ft.Row(
             controls=[
-                ft.Text(label, expand=True, size=14),
+                ft.Container(
+                    content=ft.Text(label, size=14),
+                    expand=True,
+                ),
                 btn_minus,
-                ft.Container(content=tf, width=80),
+                ft.Container(content=tf, width=75),
                 btn_plus,
             ],
-            alignment="spaceBetween",
+            vertical_alignment="center",
         )
         steppers_dict[key] = row
         return row
@@ -301,7 +305,7 @@ def main(page: ft.Page):
             create_stepper_field("bonus", "Премии / Премиальные (₽)", "0", 1000.0),
             create_stepper_field("deductions", "Удержания / Штрафы (₽)", "0", 500.0),
         ],
-        spacing=10,
+        spacing=8,
     )
 
     # --- Поля для вкладки "Оклад" ---
@@ -318,7 +322,7 @@ def main(page: ft.Page):
             create_stepper_field("bonus_oklad", "Премия (₽)", "0", 1000.0),
             create_stepper_field("deductions_oklad", "Удержания (₽)", "0", 500.0),
         ],
-        spacing=10,
+        spacing=8,
     )
 
     # --- Вкладка "Настройки & Коэффициенты" ---
@@ -365,21 +369,19 @@ def main(page: ft.Page):
             ft.Row(
                 controls=[
                     ft.ElevatedButton(
-                        "Сохранить настройки",
+                        "Сохранить",
                         icon="save",
                         on_click=save_settings,
-                        style=ft.ButtonStyle(color="green400"),
                     ),
                     ft.OutlinedButton(
                         "Сбросить",
-                        icon="restore",
+                        icon="refresh",
                         on_click=reset_settings,
                     ),
                 ],
-                alignment="spaceBetween",
             ),
         ],
-        spacing=12,
+        spacing=10,
     )
 
     # --- Вкладка "История" ---
@@ -416,14 +418,14 @@ def main(page: ft.Page):
                                         ft.Text(f"Gross: {format_rub(item.get('gross', 0.0))}", size=12, color="grey400"),
                                     ],
                                     spacing=2,
+                                    expand=True,
                                 ),
                                 ft.IconButton(
-                                    icon="delete_outline",
+                                    icon="delete",
                                     icon_color="red300",
                                     on_click=delete_item,
                                 ),
                             ],
-                            alignment="spaceBetween",
                         ),
                         padding=10,
                     )
@@ -450,47 +452,42 @@ def main(page: ft.Page):
         controls=[
             ft.Row(
                 controls=[
-                    ft.Text("История сохранённых расчётов", size=16, weight="bold", color="blue300"),
-                    ft.TextButton("Очистить всё", on_click=clear_history),
+                    ft.Text("История расчётов", size=16, weight="bold", color="blue300", expand=True),
+                    ft.TextButton("Очистить", on_click=clear_history),
                 ],
-                alignment="spaceBetween",
             ),
             history_list_view,
         ],
         spacing=10,
     )
 
-    # --- Переключатель режимов ---
+    # --- Навигация по вкладкам (надежная система через Tabs) ---
     def on_tab_change(e):
         nonlocal current_mode
-        sel = e.control.selected
-        if isinstance(sel, (list, set, tuple)) and len(sel) > 0:
-            tab_key = list(sel)[0]
-        else:
-            tab_key = "shifts"
+        idx = e.control.selected_index
+        modes = ["shifts", "oklad", "settings", "history"]
+        current_mode = modes[idx]
 
-        current_mode = tab_key
-        tab_segmented.selected = [tab_key]
-
-        if tab_key == "shifts":
+        if current_mode == "shifts":
             main_content_container.content = shifts_tab_content
-        elif tab_key == "oklad":
+        elif current_mode == "oklad":
             main_content_container.content = oklad_tab_content
-        elif tab_key == "settings":
+        elif current_mode == "settings":
             main_content_container.content = settings_tab_content
-        elif tab_key == "history":
+        elif current_mode == "history":
             update_history_view()
             main_content_container.content = history_tab_content
 
         auto_recalculate()
 
-    tab_segmented = ft.SegmentedButton(
-        selected=["shifts"],
-        segments=[
-            ft.Segment(value="shifts", label=ft.Text("Смены"), icon=ft.Icon("schedule")),
-            ft.Segment(value="oklad", label=ft.Text("Оклад"), icon=ft.Icon("account_balance_wallet")),
-            ft.Segment(value="settings", label=ft.Text("Опции"), icon=ft.Icon("settings")),
-            ft.Segment(value="history", label=ft.Text("История"), icon=ft.Icon("history")),
+    nav_tabs = ft.Tabs(
+        selected_index=0,
+        animation_duration=200,
+        tabs=[
+            ft.Tab(text="Смены", icon="schedule"),
+            ft.Tab(text="Оклад", icon="account_balance_wallet"),
+            ft.Tab(text="Опции", icon="settings"),
+            ft.Tab(text="История", icon="history"),
         ],
         on_change=on_tab_change,
     )
@@ -512,7 +509,7 @@ def main(page: ft.Page):
                         controls=[
                             ft.ElevatedButton(
                                 "Сохранить в историю",
-                                icon="bookmark_add",
+                                icon="bookmark",
                                 on_click=save_to_history,
                                 expand=True,
                             ),
@@ -535,9 +532,9 @@ def main(page: ft.Page):
                     ],
                     alignment="center",
                 ),
-                tab_segmented,
+                nav_tabs,
                 main_content_container,
-                ft.Divider(height=15, color="transparent"),
+                ft.Divider(height=10, color="transparent"),
                 results_card,
             ],
             spacing=10,
