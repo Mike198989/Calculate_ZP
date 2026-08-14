@@ -425,22 +425,38 @@ def main(page: ft.Page):
         )
     ], spacing=12, visible=False)
 
-    def on_tab_change(e):
-        idx = int(e.control.selected_index)
+    # --------------------------------------------------------------------------
+    # НАДЕЖНОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК БЕЗ ИСПОЛЬЗОВАНИЯ ft.Tabs
+    # --------------------------------------------------------------------------
+    active_btn_style = ft.ButtonStyle(
+        bgcolor=ft.Colors.BLUE_600,
+        color=ft.Colors.WHITE,
+        shape=ft.RoundedRectangleBorder(radius=10)
+    )
+    inactive_btn_style = ft.ButtonStyle(
+        shape=ft.RoundedRectangleBorder(radius=10)
+    )
+
+    btn_shifts = ft.ElevatedButton("Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED, style=active_btn_style, expand=True)
+    btn_hours = ft.ElevatedButton("Часы", icon=ft.Icons.ACCESS_TIME_OUTLINED, style=inactive_btn_style, expand=True)
+    btn_settings = ft.ElevatedButton("Настройки", icon=ft.Icons.SETTINGS_OUTLINED, style=inactive_btn_style, expand=True)
+
+    def set_tab(idx):
         shifts_view.visible = (idx == 0)
         hours_view.visible = (idx == 1)
         settings_view.visible = (idx == 2)
+
+        btn_shifts.style = active_btn_style if idx == 0 else inactive_btn_style
+        btn_hours.style = active_btn_style if idx == 1 else inactive_btn_style
+        btn_settings.style = active_btn_style if idx == 2 else inactive_btn_style
+        
         page.update()
 
-    tabs = ft.Tabs(
-        selected_index=0,
-        controls=[
-            ft.Tab(label="Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED),
-            ft.Tab(label="Часы / Перераб.", icon=ft.Icons.ACCESS_TIME_OUTLINED),
-            ft.Tab(label="Настройки", icon=ft.Icons.SETTINGS_OUTLINED),
-        ],
-        on_change=on_tab_change,
-    )
+    btn_shifts.on_click = lambda e: set_tab(0)
+    btn_hours.on_click = lambda e: set_tab(1)
+    btn_settings.on_click = lambda e: set_tab(2)
+
+    tabs_row = ft.Row([btn_shifts, btn_hours, btn_settings], spacing=6)
 
     forms_card = ft.Card(
         elevation=2,
@@ -486,7 +502,7 @@ def main(page: ft.Page):
     page.add(
         header,
         hero_card,
-        tabs,
+        tabs_row,
         forms_card,
         ft.Row([
             ft.ElevatedButton(
