@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 import flet as ft
 
 # ==============================================================================
@@ -138,6 +139,14 @@ def calculate_salary(
         "breakdown": breakdown
     }
 
+# Вспомогательный форматтер валюты в российском стиле (100 000,00 ₽)
+def format_rub(val: float) -> str:
+    sign = "-" if val < 0 else ""
+    val = abs(val)
+    int_part = f"{int(round(val * 100) // 100):,}".replace(",", " ")
+    dec_part = f"{round(val % 1, 2):.2f}"[2:]
+    return f"{sign}{int_part},{dec_part} ₽"
+
 # ==============================================================================
 # 2. ИНТЕРФЕЙС FLET
 # ==============================================================================
@@ -150,6 +159,7 @@ def main(page: ft.Page):
 
     settings_file = "app_settings.json"
     last_input_file = "last_input.json"
+    history_file = "salary_history.json"
 
     default_coefficients = {
         "hourly_rate": 344.81,
@@ -165,7 +175,7 @@ def main(page: ft.Page):
         "bonus_percent_of_base_hours": 0.95,
         "theme_mode": "system"
     }
-    
+
     coefficients = default_coefficients.copy()
     if os.path.exists(settings_file):
         try:
@@ -183,17 +193,28 @@ def main(page: ft.Page):
     else:
         page.theme_mode = ft.ThemeMode.SYSTEM
 
+    def show_snack(text):
+        sb = ft.SnackBar(content=ft.Text(text))
+        try:
+            page.open(sb)
+        except Exception:
+            page.snack_bar = sb
+            sb.open = True
+            page.update()
+
     inputs = {}
+    steppers_controls = []
+    
     fields_config = [
-        ("days_worked_normal", "Отработано смен (смен)", "0", ft.Icons.WORK_OUTLINED),
-        ("evening_shifts", "Вечерних смен (смен)", "0", ft.Icons.BEDTIME_OUTLINED),
-        ("days_pre_holiday_reduced", "Сокращенные дни (общее, дн.)", "0", ft.Icons.TIMER_OFF_OUTLINED),
-        ("days_pre_holiday_reduced_evening", "Сокращенные вечерние смены (дн.)", "0", ft.Icons.NIGHT_SHELTER_OUTLINED),
-        ("hours_overtime_first_two", "Переработка первые 2ч (ч)", "0", ft.Icons.MORE_TIME_OUTLINED),
-        ("hours_overtime_after_two", "Переработка последующие (ч)", "0", ft.Icons.ADD_ALARM_OUTLINED),
-        ("hours_weekend_holiday", "Часы в вых./праздники (ч)", "0", ft.Icons.EVENT_AVAILABLE_OUTLINED),
-        ("days_non_working_holiday", "Нерабочие праздничные дни (дн.)", "0", ft.Icons.CELEBRATION_OUTLINED),
-        ("hours_night", "Ночные часы (ч)", "0", ft.Icons.DARK_MODE_OUTLINED),
+        ("days_worked_normal", "Отработано смен", "0", ft.Icons.WORK_OUTLINED, 1),
+        ("evening_shifts", "Вечерних смен", "0", ft.Icons.BEDTIME_OUTLINED, 1),
+        ("days_pre_holiday_reduced", "Сокращенные дни (всего)", "0", ft.Icons.TIMER_OFF_OUTLINED, 1),
+        ("days_pre_holiday_reduced_evening", "Сокращенные вечерние", "0", ft.Icons.NIGHT_SHELTER_OUTLINED, 1),
+        ("hours_overtime_first_two", "Переработка (первые 2ч)", "0", ft.Icons.MORE_TIME_OUTLINED, 1),
+        ("hours_overtime_after_two", "Переработка (после 2ч)", "0", ft.Icons.ADD_ALARM_OUTLINED, 1),
+        ("hours_weekend_holiday", "Часы в вых./праздники", "0", ft.Icons.EVENT_AVAILABLE_OUTLINED, 1),
+        ("days_non_working_holiday", "Нерабочие прапздн. дни", "0", ft.Icons.CELEBRATION_OUTLINED, 1),
+        ("hours_night", "Ночные часы", "0", ft.Icons.DARK_MODE_OUTLINED, 1),
     ]
 
     saved_inputs = {}
@@ -204,16 +225,60 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    for key, label_text, default_val, icon in fields_config:
+    def parse_float(field: ft.TextField) -> float:
+        raw_val = field.value or ""
+        val_str = raw_val.strip().replace(",", ".")
+        if not val_str:
+            return 0.0
+        try:
+            return float(val_str)
+        except ValueError:
+            field.border_color = "red"
+            field.update()
+            raise ValueError(f"Неверный формат числа в поле '{field.label}'")
+
+    # Функция изменения значений кнопками + / -
+    def create_stepper_field(key, label_text, default_val, icon, step=1):
         val = saved_inputs.get(key, default_val)
-        inputs[key] = ft.TextField(
+        tf = ft.TextField(
             label=label_text,
             value=str(val if val is not None else default_val),
             keyboard_type=ft.KeyboardType.NUMBER,
             prefix_icon=icon,
             border_radius=12,
-            height=58,
+            height=54,
+            expand=True,
+            on_change=lambda e: auto_recalculate()
         )
+        inputs[key] = tf
+
+        def change_val(delta):
+            try:
+                cur = float(tf.value.replace(",", ".") or 0)
+            except ValueError:
+                cur = 0.0
+            new_val = max(0.0, cur + delta)
+            tf.value = str(int(new_val)) if new_val.is_integer() else f"{new_val:.1f}"
+            tf.update()
+            auto_recalculate()
+
+        btn_minus = ft.IconButton(
+            icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,
+            icon_color=ft.Colors.RED_400,
+            on_click=lambda e: change_val(-step)
+        )
+        btn_plus = ft.IconButton(
+            icon=ft.Icons.ADD_CIRCLE_OUTLINE,
+            icon_color=ft.Colors.BLUE_600,
+            on_click=lambda e: change_val(step)
+        )
+
+        row = ft.Row([btn_minus, tf, btn_plus], alignment=ft.MainAxisAlignment.CENTER, spacing=0)
+        return row
+
+    steppers_dict = {}
+    for key, label_text, default_val, icon, step in fields_config:
+        steppers_dict[key] = create_stepper_field(key, label_text, default_val, icon, step)
 
     theme_dropdown = ft.Dropdown(
         label="Тема оформления",
@@ -249,12 +314,13 @@ def main(page: ft.Page):
             keyboard_type=ft.KeyboardType.NUMBER,
             prefix_icon=icon,
             border_radius=12,
-            height=58,
+            height=54,
+            on_change=lambda e: auto_recalculate()
         )
 
-    net_output = ft.Text("0.00 руб.", size=30, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
-    gross_output = ft.Text("Гросс: 0.00 руб.", size=13, color=ft.Colors.WHITE_70)
-    ndfl_output = ft.Text("НДФЛ: 0.00 руб.", size=13, color=ft.Colors.WHITE_70)
+    net_output = ft.Text("0,00 ₽", size=30, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+    gross_output = ft.Text("Гросс: 0,00 ₽", size=13, color=ft.Colors.WHITE_70)
+    ndfl_output = ft.Text("НДФЛ: 0,00 ₽", size=13, color=ft.Colors.WHITE_70)
 
     hero_card = ft.Card(
         elevation=4,
@@ -282,15 +348,7 @@ def main(page: ft.Page):
     )
 
     details_column = ft.Column(spacing=6)
-
-    def show_snack(text):
-        sb = ft.SnackBar(content=ft.Text(text))
-        try:
-            page.open(sb)
-        except Exception:
-            page.snack_bar = sb
-            sb.open = True
-            page.update()
+    last_calc_result = {}
 
     def save_state():
         data = {k: v.value for k, v in inputs.items()}
@@ -300,17 +358,92 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    def parse_float(field: ft.TextField) -> float:
-        raw_val = field.value or ""
-        val_str = raw_val.strip().replace(",", ".")
-        if not val_str:
-            return 0.0
+    def auto_recalculate():
+        nonlocal last_calc_result
+        for field in inputs.values():
+            field.border_color = None
+
         try:
-            return float(val_str)
+            params = {k: parse_float(field) for k, field in inputs.items()}
+            params.update(coefficients)
+            result = calculate_salary(**params)
+            last_calc_result = result
+
+            net_output.value = format_rub(result['net_salary'])
+            gross_output.value = f"Гросс: {format_rub(result['gross_salary'])}"
+            ndfl_output.value = f"НДФЛ: {format_rub(result['ndfl_amount'])}"
+
+            details_column.controls.clear()
+
+            for name, val in result["breakdown"].items():
+                is_summary = name in ["Сумма до вычета (гросс)", "Итого к выплате (нетто)"]
+                text_color = ft.Colors.RED_400 if "НДФЛ" in name else (ft.Colors.GREEN_600 if is_summary else None)
+
+                details_column.controls.append(
+                    ft.Container(
+                        content=ft.Row(
+                            [
+                                ft.Text(name, size=13, expand=True, weight=ft.FontWeight.BOLD if is_summary else ft.FontWeight.NORMAL),
+                                ft.Text(
+                                    format_rub(val), 
+                                    size=13, 
+                                    weight=ft.FontWeight.BOLD if is_summary else ft.FontWeight.W_500,
+                                    color=text_color
+                                )
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                        ),
+                        padding=2
+                    )
+                )
+            save_state()
+            page.update()
         except ValueError:
-            field.border_color = "red"
-            field.update()
-            raise ValueError(f"Неверный формат числа в поле '{field.label}'")
+            pass
+
+    def copy_summary_click(e):
+        if not last_calc_result or "breakdown" not in last_calc_result:
+            show_snack("Сначала выполните расчёт")
+            return
+        
+        lines = ["📊 Расчет заработной платы", "-----------------------------"]
+        for k, v in last_calc_result["breakdown"].items():
+            lines.append(f"{k}: {format_rub(v)}")
+        text_summary = "\n".join(lines)
+        
+        page.set_clipboard(text_summary)
+        show_snack("Результат скопирован в буфер обмена!")
+
+    def save_to_history_click(e):
+        if not last_calc_result or last_calc_result.get("net_salary", 0) == 0:
+            show_snack("Нет данных для сохранения")
+            return
+
+        history_data = []
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, "r", encoding="utf-8") as f:
+                    history_data = json.load(f)
+            except Exception:
+                pass
+
+        now_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+        record = {
+            "date": now_str,
+            "net": last_calc_result["net_salary"],
+            "gross": last_calc_result["gross_salary"],
+            "ndfl": last_calc_result["ndfl_amount"],
+            "inputs": {k: v.value for k, v in inputs.items()}
+        }
+        history_data.insert(0, record)
+
+        try:
+            with open(history_file, "w", encoding="utf-8") as f:
+                json.dump(history_data, f, ensure_ascii=False, indent=4)
+            show_snack("Сохранено в историю!")
+            render_history()
+        except Exception as err:
+            show_snack(f"Ошибка сохранения истории: {err}")
 
     def save_settings_click(e):
         try:
@@ -337,80 +470,104 @@ def main(page: ft.Page):
             with open(settings_file, "w", encoding="utf-8") as f:
                 json.dump(coefficients, f, ensure_ascii=False, indent=4)
             
-            page.update()
+            auto_recalculate()
             show_snack("Настройки сохранены!")
         except Exception as err:
-            show_snack(f"Ошибка в настройках: {err}")
-
-    def calculate_click(e):
-        for field in inputs.values():
-            field.border_color = None
-
-        try:
-            params = {}
-            for k, field in inputs.items():
-                params[k] = parse_float(field)
-            
-            params.update(coefficients)
-            result = calculate_salary(**params)
-
-            net_output.value = f"{result['net_salary']:,.2f} руб."
-            gross_output.value = f"Гросс: {result['gross_salary']:,.2f} руб."
-            ndfl_output.value = f"НДФЛ: {result['ndfl_amount']:,.2f} руб."
-
-            details_column.controls.clear()
-
-            for name, val in result["breakdown"].items():
-                is_summary = name in ["Сумма до вычета (гросс)", "Итого к выплате (нетто)"]
-                text_color = ft.Colors.RED_400 if "НДФЛ" in name else (ft.Colors.GREEN_600 if is_summary else None)
-
-                details_column.controls.append(
-                    ft.Container(
-                        content=ft.Row(
-                            [
-                                ft.Text(name, size=13, expand=True, weight=ft.FontWeight.BOLD if is_summary else ft.FontWeight.NORMAL),
-                                ft.Text(
-                                    f"{val:,.2f} руб.", 
-                                    size=13, 
-                                    weight=ft.FontWeight.BOLD if is_summary else ft.FontWeight.W_500,
-                                    color=text_color
-                                )
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                        ),
-                        padding=4
-                    )
-                )
-            save_state()
-            page.update()
-        except ValueError as err:
-            show_snack(f"{err}")
+            show_snack(f"Ошибка: {err}")
 
     def clear_click(e):
         for field in inputs.values():
             field.value = "0"
             field.border_color = None
-        net_output.value = "0.00 руб."
-        gross_output.value = "Гросс: 0.00 руб."
-        ndfl_output.value = "НДФЛ: 0.00 руб."
-        details_column.controls.clear()
+        auto_recalculate()
         save_state()
-        page.update()
 
     shifts_view = ft.Column([
-        inputs["days_worked_normal"],
-        inputs["evening_shifts"],
+        steppers_dict["days_worked_normal"],
+        steppers_dict["evening_shifts"],
     ], spacing=12, visible=True)
 
     hours_view = ft.Column([
-        inputs["days_pre_holiday_reduced"],
-        inputs["days_pre_holiday_reduced_evening"],
-        inputs["hours_overtime_first_two"],
-        inputs["hours_overtime_after_two"],
-        inputs["hours_weekend_holiday"],
-        inputs["days_non_working_holiday"],
-        inputs["hours_night"],
+        steppers_dict["days_pre_holiday_reduced"],
+        steppers_dict["days_pre_holiday_reduced_evening"],
+        steppers_dict["hours_overtime_first_two"],
+        steppers_dict["hours_overtime_after_two"],
+        steppers_dict["hours_weekend_holiday"],
+        steppers_dict["days_non_working_holiday"],
+        steppers_dict["hours_night"],
     ], spacing=12, visible=False)
+
+    history_column = ft.Column(spacing=8)
+    history_view = ft.Column([
+        ft.Text("Сохраненные расчеты", size=15, weight=ft.FontWeight.BOLD),
+        history_column
+    ], spacing=12, visible=False)
+
+    def load_history_item(inputs_data):
+        for k, v in inputs_data.items():
+            if k in inputs:
+                inputs[k].value = str(v)
+        auto_recalculate()
+        tab_segmented.selected = {"shifts"}
+        set_tab("shifts")
+        show_snack("Данные загружены из истории")
+
+    def delete_history_item(index):
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, "r", encoding="utf-8") as f:
+                    history_data = json.load(f)
+                if 0 <= index < len(history_data):
+                    history_data.pop(index)
+                    with open(history_file, "w", encoding="utf-8") as f:
+                        json.dump(history_data, f, ensure_ascii=False, indent=4)
+                    render_history()
+            except Exception:
+                pass
+
+    def render_history():
+        history_column.controls.clear()
+        if not os.path.exists(history_file):
+            history_column.controls.append(ft.Text("История пуста", color=ft.Colors.GREY_500, size=13))
+            page.update()
+            return
+
+        try:
+            with open(history_file, "r", encoding="utf-8") as f:
+                history_data = json.load(f)
+            if not history_data:
+                history_column.controls.append(ft.Text("История пуста", color=ft.Colors.GREY_500, size=13))
+            else:
+                for idx, item in enumerate(history_data):
+                    history_column.controls.append(
+                        ft.Card(
+                            elevation=1,
+                            content=ft.Container(
+                                content=ft.Row([
+                                    ft.Column([
+                                        ft.Text(item["date"], size=11, color=ft.Colors.GREY_600),
+                                        ft.Text(format_rub(item["net"]), size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_600),
+                                        ft.Text(f"Гросс: {format_rub(item['gross'])}", size=11, color=ft.Colors.GREY_600),
+                                    ], expand=True, spacing=2),
+                                    ft.IconButton(
+                                        icon=ft.Icons.UPLOAD_FILE_OUTLINED, 
+                                        tooltip="Загрузить в форму",
+                                        on_click=lambda e, inp=item.get("inputs", {}): load_history_item(inp)
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.DELETE_OUTLINE, 
+                                        icon_color=ft.Colors.RED_400,
+                                        tooltip="Удалить",
+                                        on_click=lambda e, i=idx: delete_history_item(i)
+                                    )
+                                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                padding=10
+                            )
+                        )
+                    )
+        except Exception:
+            history_column.controls.append(ft.Text("Ошибка чтения истории", color=ft.Colors.RED_400))
+        page.update()
 
     settings_view = ft.Column([
         theme_dropdown,
@@ -426,41 +583,32 @@ def main(page: ft.Page):
     ], spacing=12, visible=False)
 
     # --------------------------------------------------------------------------
-    # НАДЕЖНОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК (Стили оптимизированы под 1 строку)
+    # НАТИВНЫЙ ПЕРЕКЛЮЧАТЕЛЬ ВКЛАДОК Material 3 (SegmentedButton)
     # --------------------------------------------------------------------------
-    btn_text_style = ft.TextStyle(size=11, weight=ft.FontWeight.W_500)
+    def on_tab_change(e):
+        selected_tab = list(e.data)[0] if isinstance(e.data, set) else list(tab_segmented.selected)[0]
+        set_tab(selected_tab)
 
-    active_btn_style = ft.ButtonStyle(
-        bgcolor=ft.Colors.BLUE_600,
-        color=ft.Colors.WHITE,
-        shape=ft.RoundedRectangleBorder(radius=10),
-        text_style=btn_text_style
-    )
-    inactive_btn_style = ft.ButtonStyle(
-        shape=ft.RoundedRectangleBorder(radius=10),
-        text_style=btn_text_style
-    )
-
-    btn_shifts = ft.ElevatedButton("Смены", icon=ft.Icons.CALENDAR_MONTH_OUTLINED, style=active_btn_style, expand=True)
-    btn_hours = ft.ElevatedButton("Часы", icon=ft.Icons.ACCESS_TIME_OUTLINED, style=inactive_btn_style, expand=True)
-    btn_settings = ft.ElevatedButton("Настройки", icon=ft.Icons.SETTINGS_OUTLINED, style=inactive_btn_style, expand=True)
-
-    def set_tab(idx):
-        shifts_view.visible = (idx == 0)
-        hours_view.visible = (idx == 1)
-        settings_view.visible = (idx == 2)
-
-        btn_shifts.style = active_btn_style if idx == 0 else inactive_btn_style
-        btn_hours.style = active_btn_style if idx == 1 else inactive_btn_style
-        btn_settings.style = active_btn_style if idx == 2 else inactive_btn_style
-        
+    def set_tab(tab_key):
+        shifts_view.visible = (tab_key == "shifts")
+        hours_view.visible = (tab_key == "hours")
+        history_view.visible = (tab_key == "history")
+        settings_view.visible = (tab_key == "settings")
+        if tab_key == "history":
+            render_history()
         page.update()
 
-    btn_shifts.on_click = lambda e: set_tab(0)
-    btn_hours.on_click = lambda e: set_tab(1)
-    btn_settings.on_click = lambda e: set_tab(2)
-
-    tabs_row = ft.Row([btn_shifts, btn_hours, btn_settings], spacing=4)
+    tab_segmented = ft.SegmentedButton(
+        selected={"shifts"},
+        allow_multiple_selection=False,
+        segments=[
+            ft.Segment(value="shifts", label=ft.Text("Смены", size=11), icon=ft.Icon(ft.Icons.CALENDAR_MONTH_OUTLINED)),
+            ft.Segment(value="hours", label=ft.Text("Часы", size=11), icon=ft.Icon(ft.Icons.ACCESS_TIME_OUTLINED)),
+            ft.Segment(value="history", label=ft.Text("История", size=11), icon=ft.Icon(ft.Icons.HISTORY_OUTLINED)),
+            ft.Segment(value="settings", label=ft.Text("Опции", size=11), icon=ft.Icon(ft.Icons.SETTINGS_OUTLINED)),
+        ],
+        on_change=on_tab_change,
+    )
 
     forms_card = ft.Card(
         elevation=2,
@@ -468,6 +616,7 @@ def main(page: ft.Page):
             content=ft.Column([
                 shifts_view,
                 hours_view,
+                history_view,
                 settings_view,
             ]),
             padding=16,
@@ -485,13 +634,29 @@ def main(page: ft.Page):
                 ], spacing=8),
                 ft.Divider(height=10),
                 details_column,
+                ft.Divider(height=10),
+                ft.Row([
+                    ft.OutlinedButton(
+                        "Скопировать", 
+                        icon=ft.Icons.COPY_OUTLINED, 
+                        on_click=copy_summary_click,
+                        expand=True,
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+                    ),
+                    ft.OutlinedButton(
+                        "В историю", 
+                        icon=ft.Icons.BOOKMARK_BORDER_OUTLINED, 
+                        on_click=save_to_history_click,
+                        expand=True,
+                        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))
+                    ),
+                ], spacing=8)
             ]),
             padding=16,
             border_radius=14,
         )
     )
 
-    # Заголовок приложения
     header = ft.Container(
         content=ft.Row(
             [
@@ -505,34 +670,27 @@ def main(page: ft.Page):
     )
 
     page.add(
-        ft.Container(height=20),  # Гарантированный отступ сверху под шторку/вырез смартфона
+        ft.Container(height=20),
         header,
         hero_card,
-        tabs_row,
+        ft.Row([tab_segmented], alignment=ft.MainAxisAlignment.CENTER),
         forms_card,
         ft.Row([
-            ft.ElevatedButton(
-                "Рассчитать", 
-                icon=ft.Icons.CALCULATE_OUTLINED, 
-                on_click=calculate_click, 
-                expand=True, 
-                height=50,
-                style=ft.ButtonStyle(
-                    shape=ft.RoundedRectangleBorder(radius=12),
-                    bgcolor=ft.Colors.BLUE_600,
-                    color=ft.Colors.WHITE
-                )
-            ),
             ft.OutlinedButton(
-                "Очистить", 
+                "Сбросить всё", 
                 icon=ft.Icons.BACKSPACE_OUTLINED, 
                 on_click=clear_click, 
-                height=50,
+                expand=True,
+                height=46,
                 style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12))
             ),
-        ], spacing=10),
+        ]),
         details_card
     )
 
+    # Запуск авторасчета при старте для сохраненных данных
+    auto_recalculate()
+
 if __name__ == "__main__":
     ft.app(target=main)
+
