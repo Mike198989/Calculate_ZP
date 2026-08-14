@@ -378,7 +378,7 @@ def main(page: ft.Page):
                             ],
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                         ),
-                        padding=ft.padding.symmetric(vertical=2, horizontal=4)
+                        padding=4
                     )
                 )
             save_state()
@@ -426,7 +426,7 @@ def main(page: ft.Page):
     ], spacing=12, visible=False)
 
     # --------------------------------------------------------------------------
-    # НАДЕЖНОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК БЕЗ ИСПОЛЬЗОВАНИЯ ft.Tabs
+    # НАДЕЖНОЕ ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
     # --------------------------------------------------------------------------
     active_btn_style = ft.ButtonStyle(
         bgcolor=ft.Colors.BLUE_600,
@@ -496,7 +496,7 @@ def main(page: ft.Page):
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=8
         ),
-        padding=ft.padding.only(top=10, bottom=10)
+        padding=10
     )
 
     page.add(
@@ -530,3 +530,4 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     ft.app(target=main)
+
